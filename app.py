@@ -37,14 +37,11 @@ def verify_signature(payload_body, signature_header):
     expected_signature = "sha256=" + hash_object.hexdigest()
     return hmac.compare_digest(expected_signature, signature_header)
 
-# @app.route('/')
-# def index():
-#     """Render the main page that displays GitHub events."""
-#     return render_template('index.html')
-
 @app.route('/')
 def index():
-    return "✅ Flask is running on Render!"
+    """Render the main page that displays GitHub events."""
+    return render_template('index.html')
+
  
 @app.route('/api/events')
 def get_events():
