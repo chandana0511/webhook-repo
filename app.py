@@ -1,4 +1,6 @@
 from flask import Flask, request, jsonify, render_template
+from bson.json_util import dumps
+from datetime import datetime, timezone
 import json
 import pymongo
 from datetime import datetime
@@ -42,21 +44,26 @@ def index():
     """Render the main page that displays GitHub events."""
     return render_template('index.html')
 
- 
+
 @app.route('/api/events')
 def get_events():
     """API endpoint to get the latest GitHub events."""
     try:
-        # Get the latest 50 events, sorted by timestamp (newest first)
-        events = list(collection.find().sort('timestamp', -1).limit(50))
-        
-        # Convert ObjectId to string for JSON serialization
+        # Get latest 50 events
+        events_cursor = collection.find().sort('timestamp', -1).limit(50)
+        events = list(events_cursor)
+
+        # Convert ObjectId and datetime to JSON serializable format
         for event in events:
             event['_id'] = str(event['_id'])
-            
+            if 'timestamp' in event:
+                event['timestamp'] = event['timestamp'].isoformat()  # Convert datetime to ISO string
+
         return jsonify(events)
     except Exception as e:
+        print("Error in /api/events:", e)
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
@@ -93,7 +100,7 @@ def handle_push_event(payload):
         # Extract relevant information
         author = payload['pusher']['name']
         branch = payload['ref'].split('/')[-1]  # Extract branch name from refs/heads/branch_name
-        timestamp = datetime.utcnow()
+        timestamp = datetime.now(timezone.utc)
         repository = payload['repository']['name']
         
         # Create document for MongoDB
@@ -126,7 +133,7 @@ def handle_pull_request_event(payload):
             author = payload['pull_request']['user']['login']
             from_branch = payload['pull_request']['head']['ref']
             to_branch = payload['pull_request']['base']['ref']
-            timestamp = datetime.utcnow()
+            timestamp = datetime.now(timezone.utc)
             repository = payload['repository']['name']
             
             # Create document for MongoDB
@@ -149,7 +156,7 @@ def handle_pull_request_event(payload):
             author = payload['pull_request']['merged_by']['login']
             from_branch = payload['pull_request']['head']['ref']
             to_branch = payload['pull_request']['base']['ref']
-            timestamp = datetime.utcnow()
+            timestamp = datetime.now(timezone.utc)
             repository = payload['repository']['name']
             
             # Create document for MongoDB
